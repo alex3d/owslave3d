@@ -6,7 +6,7 @@
 #define USE_COMPUTED_GOTO 1
 
 // Clock is set via fuse, at least to 4MHz
-#define F_CPU   4000000
+#define F_CPU   8000000
 
 #if F_CPU>4000000
 #define PRESCALE 64
@@ -42,15 +42,30 @@ exec bc print "TICKS_IN_SAMPLE = ", TICKS_IN_SAMPLE, " ticks\n"
 #include<util/delay.h>
 #include<avr/interrupt.h>
 
+#include "counter.h"
+
 #define inline __attribute((always_inline))
 
+/* 168
+#define GIMSK EIMSK
+#define GIFR EIFR
+#define TIFR TIFR0
+#define TIMSK TIMSK0
+#define TCCR0 TCCR0B
+#define MCUCR EICRA
+*/
+#define GIFR EIFR // attiny2313
+#define SIGRD 5
 
 inline void owslave_init(void){
 
+//	TCCR0A = 0; 168
 #if PRESCALE==64
-    TCCR0 = 0x03;           // Prescaler 1/64
+    //TCCR0 = 0x03;           // Prescaler 1/64
+    TCCR0B = 3;
 #elif PRESCALE==8
-    TCCR0 = 0x02;           // Prescaler 1/8
+    //TCCR0 = 0x02;           // Prescaler 1/8
+    TCCR0B = 2;
 #else
     #error unknown PRESCALER
 #endif
@@ -80,7 +95,6 @@ void inline owslave_set_timeout(uint8_t timeout){
 static inline void owslave_pin_low(void) { DDRD |= (1<<2); }
 static inline void owslave_pin_hiz(void) { DDRD &= ~(1<<2); }
 #define owslave_pin_value() (PIND & (1<<2))
-#define owslave_pin_unmasked() (GIMSK&(1<<INT0))
 
 static inline void owslave_pin_falling(void){ MCUCR = (MCUCR&~(3<<ISC00))|(2 << ISC00);  /* Interrupt on falling */ }
 static inline void owslave_pin_rising(void) { MCUCR = (MCUCR&~(3<<ISC00))|(3 << ISC00);  /* Interrupt on rising  */ }
@@ -93,9 +107,9 @@ static inline void alive(void){
     static uint8_t val=0;
     val++;
     if(val&1)
-        PORTC |= (1<<5);
+        PORTD |= (1<<5);
     else
-        PORTC &= ~(1<<5);
+        PORTD &= ~(1<<5);
 }
 #ifndef VOLATILE
 #define volatile
@@ -122,10 +136,12 @@ volatile void* owslave_state_label;
 uint8_t* owslave_state_temp_ptr;
 
 static uint8_t UID[8]={
-0x28, 0x24, 0x86, 0x0C, 0x03, 0x00, 0x00, 0xD5
+//0x28, 0x24, 0x86, 0x0C, 0x03, 0x00, 0x00, 0xD5
+0x1D, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x8B
 };
 
-#define owslave_uid_byte(x) (UID[x])
+#define owslave_uid_byte(i) UID[i]
+//#define owslave_uid_byte(i) pgm_read_byte(UID+i)
 
 
 #define owslave_timer_interrupt ISR(TIMER0_OVF_vect)

@@ -1,0 +1,13 @@
+V memwrite reply
+V fix vectors?
+V disable write to bootloader addresses?
+
+V move bootloader to flash end + add $0000 bootstrap
+
+V setup app timer // use search count instead ?
+V goto app timer
+
+V remove "_safe"?
+
+watch dog reset?
+clear flash buffer?
